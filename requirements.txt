@@ -21,6 +21,7 @@ platformdirs==4.3.8
 protobuf==6.32.0
 pycparser==2.22
 python-dateutil==2.9.0.post0
+python-dotenv==1.1.1
 pytz==2025.2
 requests==2.32.5
 six==1.17.0
