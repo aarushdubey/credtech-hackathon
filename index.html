@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CredTech Intelligence Platform</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="main-layout">
+        <div class="watchlist-container">
+            <h3>My Watchlist</h3>
+            <ul id="watchlist-list"></ul>
+        </div>
+        <div class="container">
+            <h1>CredTech Intelligence Platform</h1>
+            <div class="search-container">
+                <input type="text" id="ticker-input" placeholder="Enter stock ticker (e.g., AAPL)">
+                <button id="search-btn">Get Score</button>
+            </div>
+            <div class="recommendations-container">
+                <h3>Popular Companies</h3>
+                <div class="recommendations-grid">
+                    {% for company in recommendations %}
+                        <button class="recommendation-btn" data-ticker="{{ company.ticker }}">{{ company.name }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+            <div id="loader" class="hidden"></div>
+            <div id="error-container" class="error-message hidden"></div>
+            <div id="results-container" class="hidden">
+                <div class="header-section">
+                    <h2 id="company-name"></h2>
+                    <button id="add-to-watchlist-btn">Add to Watchlist</button>
+                </div>
+                <div class="main-content">
+                    <div class="score-card">
+                        <p>Credit Score</p>
+                        <span id="credit-score"></span>
+                    </div>
+                    <div class="explanation-card">
+                        <h3>Score Breakdown</h3>
+                        <div id="explanation-breakdown"></div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3>Historical Price Trend</h3>
+                        <div id="timeframe-controls">
+                            <button class="timeframe-btn active" data-period="1m">1M</button>
+                            <button class="timeframe-btn" data-period="3m">3M</button>
+                            <button class="timeframe-btn" data-period="6m">6M</button>
+                            <button class="timeframe-btn" data-period="1y">1Y</button>
+                        </div>
+                    </div>
+                    <canvas id="historical-chart"></canvas>
+                </div>
+                <div class="peer-container">
+                    <h3>Peer Comparison</h3>
+                    <div id="peer-scores"></div>
+                </div>
+                <div class="headlines-container">
+                    <h3>Recent Headlines</h3>
+                    <ul id="headlines-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>
