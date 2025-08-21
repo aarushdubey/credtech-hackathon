@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import requests
 import time
@@ -6,7 +8,7 @@ import yfinance as yf
 from datetime import datetime, timedelta
 
 # --- CONFIGURATION ---
-NEWS_API_KEY = os.environ.get("c7d5ac09f57b4508ab5f83dbb1b00076")
+NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
 
 TOP_COMPANIES = [
     {'name': 'Apple', 'ticker': 'AAPL'}, {'name': 'Microsoft', 'ticker': 'MSFT'},
