@@ -68,8 +68,26 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { console.error('Error fetching historical data:', error); }
     };
 
-    const renderPeerScores = (peers) => { /* ... unchanged ... */ };
-    const renderExplanation = (explanation) => { /* ... unchanged ... */ };
+    const renderPeerScores = (peers) => {
+        const container = document.getElementById('peer-scores');
+        container.innerHTML = '';
+        if (peers && peers.length > 0) {
+            peers.forEach(peer => {
+                const scoreClass = peer.score > 65 ? 'score-good' : (peer.score < 40 ? 'score-bad' : 'score-neutral');
+                container.innerHTML += `<div class="peer-card"><h4>${peer.ticker}</h4><span class="peer-score ${scoreClass}">${peer.score || 'N/A'}</span></div>`;
+            });
+        } else {
+            container.innerHTML = '<p>No peer data available for this ticker.</p>';
+        }
+    };
+
+    const renderExplanation = (explanation) => {
+        const container = document.getElementById('explanation-breakdown');
+        container.innerHTML = '';
+        for (const key in explanation) {
+            container.innerHTML += `<p>${explanation[key]}</p>`;
+        }
+    };
 
     const setupAutoRefresh = (ticker) => {
         if (autoRefreshInterval) clearInterval(autoRefreshInterval);
@@ -105,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (data.credit_score < 40) scoreElement.classList.add('score-bad');
             else scoreElement.classList.add('score-neutral');
             
-            // --- UPDATE: MAKE HEADLINES CLICKABLE ---
             const headlinesList = document.getElementById('headlines-list');
             headlinesList.innerHTML = '';
             data.recent_headlines.forEach(article => {
@@ -120,7 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderExplanation(data.explanation);
             renderPeerScores(data.peer_scores);
-            if (!isAutoRefresh) { await renderChart(ticker, '1m'); }
+            if (!isAutoRefresh) {
+                document.querySelectorAll('.timeframe-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelector('.timeframe-btn[data-period="1m"]').classList.add('active');
+                await renderChart(ticker, '1m');
+            }
 
             resultsContainer.classList.remove('hidden');
             setupAutoRefresh(ticker);
@@ -132,6 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- EVENT LISTENERS ---
     searchBtn.addEventListener('click', () => fetchScore());
     tickerInput.addEventListener('keyup', (event) => { if (event.key === 'Enter') fetchScore(); });
     recommendationsGrid.addEventListener('click', (event) => {
@@ -148,5 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- INITIALIZE ---
     renderWatchlist();
-});
+}); // The extra '}' was removed from here

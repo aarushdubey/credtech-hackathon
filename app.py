@@ -81,7 +81,7 @@ def calculate_single_ticker_score(ticker, get_peers=False):
     peer_scores = []
     if get_peers and ticker in PEER_GROUPS:
         for peer_ticker in PEER_GROUPS[ticker]:
-            peer_score_data = calculate_single_ticker_score(peer_ticker)
+            peer_score_data = calculate_single_ticker_score(peer_ticker, get_peers=False)
             peer_scores.append({
                 'ticker': peer_ticker, 'name': peer_score_data.get('company_name', peer_ticker),
                 'score': peer_score_data.get('credit_score')
