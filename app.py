@@ -8,7 +8,7 @@ import yfinance as yf
 from datetime import datetime, timedelta
 
 # --- CONFIGURATION ---
-NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
+GUARDIAN_API_KEY = os.environ.get("GUARDIAN_API_KEY")
 
 TOP_COMPANIES = [
     {'name': 'Apple', 'ticker': 'AAPL'}, {'name': 'Microsoft', 'ticker': 'MSFT'},
@@ -137,20 +137,32 @@ def calculate_single_ticker_score(ticker, get_peers=False):
     }
 
 def get_news_sentiment(company_name):
-    url = (f"https://newsapi.org/v2/everything?q={company_name}&sortBy=publishedAt&apiKey={NEWS_API_KEY}&language=en")
+    """Fetches news from The Guardian API and performs sentiment analysis."""
+    if not GUARDIAN_API_KEY:
+        return 0, [{'title': 'Guardian API Key is not configured.', 'url': '#'}]
+
+    url = (f"https://content.guardianapis.com/search?"
+           f"q={company_name}&"
+           f"api-key={GUARDIAN_API_KEY}")
+    
     try:
-        response = requests.get(url); response.raise_for_status()
-        articles = response.json().get('articles', [])
-        sentiment_score = 0; latest_headlines = []
-        for article in articles[:5]:
-            headline = article['title'].lower()
-            # --- UPDATE: INCLUDE THE URL WITH THE TITLE ---
-            latest_headlines.append({'title': article['title'], 'url': article['url']})
+        response = requests.get(url)
+        response.raise_for_status()
+        articles = response.json().get('response', {}).get('results', [])
+        sentiment_score = 0
+        latest_headlines = []
+        for article in articles[:10]: # Get up to 10 articles
+            headline = article.get('webTitle', '').lower()
+            latest_headlines.append({
+                'title': article.get('webTitle', 'No Title'),
+                'url': article.get('webUrl', '#')
+            })
             if any(word in headline for word in POSITIVE_KEYWORDS): sentiment_score += 1
             if any(word in headline for word in NEGATIVE_KEYWORDS): sentiment_score -= 1
         return sentiment_score, latest_headlines
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching news: {e}"); return 0, []
+        print(f"Error fetching news from The Guardian: {e}")
+        return 0, [{'title': f'Guardian API Error: {e}', 'url': '#'}]
 
 @app.route('/')
 def home():
