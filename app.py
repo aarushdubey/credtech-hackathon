@@ -45,39 +45,80 @@ def calculate_single_ticker_score(ticker, get_peers=False):
     company_name = info.get('longName')
     if not company_name: return {"error": f"Invalid ticker symbol: {ticker}"}
 
+    # --- 1. DEFINE WEIGHTS for a more robust model ---
+    WEIGHTS = {
+        'financials': 0.40, # 40%
+        'news': 0.35,       # 35%
+        'price': 0.20,      # 20%
+        'macro': 0.05       # 5%
+    }
+
+    # --- 2. GATHER ALL DATA POINTS ---
+    # Price Data
     current_price = info.get('regularMarketPrice')
     previous_close = info.get('previousClose')
+    # Financial Ratios
     debt_to_equity = info.get('debtToEquity')
+    profit_margin = info.get('profitMargins')
+    current_ratio = info.get('currentRatio')
+    # Unstructured Data
     news_sentiment, headlines = get_news_sentiment(company_name)
-    base_score = 50
+    
     explanation = {}
+    
+    # --- 3. CALCULATE SUB-SCORES (0-100) FOR EACH CATEGORY ---
+    
+    # Price Sub-Score
+    price_sub_score = 50 # Start neutral
+    if current_price and previous_close and previous_close > 0:
+        percent_change = ((current_price - previous_close) / previous_close) * 100
+        # Scale the impact: a 2% change equals a 10 point swing. Cap at +/- 40 points.
+        score_adjustment = max(-40, min(40, percent_change * 5))
+        price_sub_score += score_adjustment
+        explanation['price_impact'] = f"Price changed by {round(percent_change, 2)}%, adjusting score by {round(score_adjustment)} pts."
+    else:
+        explanation['price_impact'] = "Neutral: Real-time price data unavailable."
 
-    if current_price and previous_close:
-        if current_price >= previous_close:
-            base_score += 5
-            explanation['price_impact'] = f"Positive: Stock price ({current_price}) is at or above its previous close."
-        else:
-            base_score -= 5
-            explanation['price_impact'] = f"Negative: Stock price ({current_price}) is below its previous close."
-    else: explanation['price_impact'] = "Neutral: Could not retrieve real-time price data."
+    # News Sub-Score
+    news_sub_score = 50 + (news_sentiment * 10) # Each sentiment point is worth 10 score points
+    explanation['news_impact'] = f"News sentiment score is {news_sentiment}, resulting in a sub-score of {news_sub_score}."
 
-    base_score += (news_sentiment * 10)
-    if news_sentiment > 0: explanation['news_impact'] = f"Positive: Recent news sentiment is favorable (Sentiment: {news_sentiment})."
-    elif news_sentiment < 0: explanation['news_impact'] = f"Negative: Recent news sentiment is cautious (Sentiment: {news_sentiment})."
-    else: explanation['news_impact'] = "Neutral: Recent news sentiment is balanced."
+    # Financials Sub-Score
+    financials_sub_score = 0
+    factors_count = 0
+    if debt_to_equity is not None:
+        # Lower D/E is better. Score is 100 if D/E is 0, and 0 if D/E is 200+.
+        financials_sub_score += max(0, 100 - (debt_to_equity / 2))
+        factors_count += 1
+    if profit_margin is not None:
+        # Higher margin is better. A 10% margin gives 50 points. A 20%+ margin gives 100.
+        financials_sub_score += min(100, (profit_margin * 500))
+        factors_count += 1
+    if current_ratio is not None:
+        # Higher ratio is better. A ratio of 2.0 gives 100 points.
+        financials_sub_score += min(100, current_ratio * 50)
+        factors_count += 1
+    
+    if factors_count > 0:
+        financials_sub_score /= factors_count # Average the scores from available factors
+        explanation['financial_impact'] = f"Financial health sub-score is {round(financials_sub_score)} based on {factors_count} key ratios."
+    else:
+        financials_sub_score = 50 # Default to neutral if no data
+        explanation['financial_impact'] = "Neutral: Financial ratios unavailable."
 
-    if debt_to_equity:
-        if debt_to_equity > 1.5:
-            base_score -= 10
-            explanation['financial_impact'] = f"High Risk: Debt-to-Equity ratio is high ({round(debt_to_equity, 2)})."
-        else:
-            base_score += 5
-            explanation['financial_impact'] = f"Healthy: Debt-to-Equity ratio is good ({round(debt_to_equity, 2)})."
+    # Macro Sub-Score
+    macro_sub_score = 20 # A low score reflecting poor outlook
+    explanation['macro_impact'] = f"Macroeconomic outlook is cautious, setting a base score of {macro_sub_score}."
 
-    if True: # is_recession_looming
-        base_score -= 5
-        explanation['macro_impact'] = "Negative: Score adjusted down for negative macroeconomic outlook."
-
+    # --- 4. CALCULATE FINAL WEIGHTED SCORE ---
+    final_score = (
+        financials_sub_score * WEIGHTS['financials'] +
+        news_sub_score * WEIGHTS['news'] +
+        price_sub_score * WEIGHTS['price'] +
+        macro_sub_score * WEIGHTS['macro']
+    )
+    
+    # --- Peer Comparison Logic (remains the same) ---
     peer_scores = []
     if get_peers and ticker in PEER_GROUPS:
         for peer_ticker in PEER_GROUPS[ticker]:
@@ -89,8 +130,10 @@ def calculate_single_ticker_score(ticker, get_peers=False):
 
     return {
         'company_name': company_name, 'ticker': ticker,
-        'credit_score': max(0, min(100, base_score)), 'explanation': explanation,
-        'recent_headlines': headlines, 'peer_scores': peer_scores
+        'credit_score': round(final_score),
+        'explanation': explanation,
+        'recent_headlines': headlines,
+        'peer_scores': peer_scores
     }
 
 def get_news_sentiment(company_name):
